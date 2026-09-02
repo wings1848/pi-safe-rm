@@ -45,7 +45,9 @@ jobs:
       #  - 若仓库配置了 GitHub Secrets 的 NPM_TOKEN → 传统 token 发布
       #  - 若 npm 侧已关联 Trusted Publisher（OIDC）→ 自动走可信发布，无需 token
       - name: Set version from tag
-        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
+        # --allow-same-version：package.json 已同步到同版本时（如发版 PR 里 bump 过）
+        # npm version 会报 "Version not changed" 中断发布；tag 始终是唯一真相源
 
       - name: Publish to npm
         run: npm publish --provenance --access public

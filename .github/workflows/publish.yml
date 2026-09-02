@@ -20,8 +20,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           registry-url: https://registry.npmjs.org/
+
+      - name: Ensure npm >= 11.5 (OIDC trust requirement)
+        run: npm install -g npm@latest >/dev/null 2>&1 && npm --version
 
       - name: Install dev deps
         run: npm i -D typescript @types/node
@@ -31,6 +34,12 @@ jobs:
           bunx tsc -p tsconfig.json --noEmit
           bun ./src/rewrite.test.ts
           bun ./src/coexistence.test.ts
+
+      - name: Secrets scan gate (verified only, quick)
+        uses: trufflesecurity/trufflehog@v3.88.2
+        with:
+          path: ./
+          extra_args: --results=verified --fail --no-update
 
       # 双模式发布：
       #  - 若仓库配置了 GitHub Secrets 的 NPM_TOKEN → 传统 token 发布

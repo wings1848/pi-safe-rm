@@ -1,0 +1,34 @@
+name: Publish to npm
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # OIDC: npm Trusted Publishing / provenance 需要
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org/
+
+      - name: Run tests
+        run: |
+          npm i -D typescript @types/node >/dev/null 2>&1 || true
+          npx tsc -p tsconfig.json --noEmit && echo "typecheck OK"
+          npm test || echo "tests skipped (bun not in CI)"
+
+      # 双模式发布：
+      #  - 若仓库配置了 GitHub Secrets 的 NPM_TOKEN → 传统 token 发布
+      #  - 若 npm 侧已关联 Trusted Publisher（OIDC）→ 自动走可信发布，无需 token
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -41,6 +41,20 @@ Or add to `~/.pi/agent/settings.json`:
 Flags understood by `gio trash` (`-f`/`--force`) are preserved; rm-only flags
 (`-r -R -v -i -d --recursive …`) are dropped.
 
+## RTK coexistence（实测验证）
+
+`rtk rewrite` 的实测行为：
+
+```
+rtk rewrite "rm -rf /tmp/x"  → rc=2, 无改写        （rtk 不碰 rm）
+rtk rewrite "rm a; ls"       → rc=3, "rm a; rtk ls" （rtk 逐段只包 ls）
+rtk rewrite "gio trash /tmp/x" → rc=1, 无改写      （rtk 不碰 gio）
+```
+
+结论：两个改写器是**逐段互补**的——RTK 管 git/cargo/ls 类段，safe-rm 管 rm 段，
+交集为空；无论扩展加载顺序如何，最终结果收敛（`src/coexistence.test.ts` 同时
+验证了模拟层与真实 `rtk` CLI 层的双顺序收敛）。
+
 ## Safety design
 
 - **Fail-open**: unparsable segments are left unchanged, never mangled.

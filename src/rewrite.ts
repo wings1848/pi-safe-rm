@@ -192,6 +192,11 @@ export function rewriteSegment(segment: string): string | null {
   if (tokens.length === 0) return null;
   if (isEscapeHatch(tokens)) return null;
 
+  // RTK 协作守卫（实测数据：rtk rewrite "rm a; ls" → "rm a; rtk ls"）：
+  // - `rtk ...` 包装段是 RTK 的产物，绝不改动（防止未来 RTK 行为变化）
+  // - `gio ...` 段已是本扩展的产物，幂等跳过（防止二次改写）
+  if (tokens[0] === "rtk" || tokens[0] === "gio" || tokens[0] === "gio-thrash") return null;
+
   const parsed = parseRmCommand(tokens);
   if (parsed.kind === "query") return null;
   if (parsed.kind === "other") return null;

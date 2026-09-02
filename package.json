@@ -14,7 +14,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "test": "bun ./src/rewrite.test.ts",
+    "test": "bun ./src/rewrite.test.ts && bun ./src/coexistence.test.ts",
     "typecheck": "bunx tsc -p tsconfig.json --noEmit"
   },
   "keywords": [

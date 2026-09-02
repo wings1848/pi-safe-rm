@@ -6,7 +6,7 @@ pi 扩展插件（npm 包，GitHub=wings1848，npm=wingsbutterfly，两者账号
 
 ## 开发规范（repo-workflow）
 
-- 改 `src/` 后必须跑：`bun ./src/rewrite.test.ts && bun ./src/coexistence.test.ts`（34 用例）+ `bunx tsc -p tsconfig.json --noEmit`
+- 改 `src/` 后必须跑：`bun ./src/rewrite.test.ts && bun ./src/coexistence.test.ts`（全量用例）+ `bunx tsc -p tsconfig.json --noEmit`
 - 修改命令改写逻辑时保持 **fail-open**：解析不了就原样放行，绝不破坏命令
 - 与 RTK 共存：只处理 rm 段；`rtk`/`gio` 段守卫不可移除（见 coexistence.test.ts）
 - 主分支受保护：一律 分支 → PR → CI 绿（secrets scan）→ squash 合并

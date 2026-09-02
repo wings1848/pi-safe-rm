@@ -34,6 +34,7 @@ Or add to `~/.pi/agent/settings.json`:
 | `command rm -rf dir` | `gio trash --force dir` |
 | `cd x && rm -rf dir \| head` | `cd x && gio trash --force dir \| head` |
 | `rm "path with spaces"` | `gio trash "path with spaces"` |
+| `rm /tmp/x` | **unchanged** (system temp dirs: gio trash refuses them there — real delete) |
 | `SAFE_RM_USE_RM=1 rm -rf x` | **unchanged** (bypass — delete for real) |
 | `command -v rm` | unchanged (query, not invocation) |
 | `git status` | unchanged |
@@ -66,6 +67,8 @@ rtk rewrite "gio trash /tmp/x" → rc=1, 无改写      （rtk 不碰 gio）
 
 - **Fail-open**: unparsable segments are left unchanged, never mangled.
 - **Escape hatch**: prefix a command with `SAFE_RM_USE_RM=1` to delete for real.
+- **System temp passthrough**: targets entirely under `/tmp` / `/var/tmp` run as real `rm` — gio trash refuses files on GLib's "system internal" mounts, so the rewrite would only turn a working delete into a guaranteed failure. Mixed targets stay conservative (rewritten).
+- **Trash does not free space**: `gio trash` is a same-filesystem rename — no extra space is ever needed (it can't "not fit"), but trashed files keep occupying space until the trash is emptied (`gio trash --empty`). When reclaiming space matters, use `SAFE_RM_USE_RM=1`.
 - **No gio → no rewrite**: on systems without `gio`, commands run as-is.
 - **No RTK conflict**: RTK's rewrite pipeline never touches `rm`; this
   extension never touches non-rm commands.

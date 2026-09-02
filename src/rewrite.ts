@@ -43,6 +43,39 @@ const DROP_FLAGS = new Set([
 const FORCE_FLAGS = new Set(["-f", "--force"]);
 
 /**
+ * 系统临时目录：gio trash 对 GLib「系统内部挂载点」清单上的文件一律拒绝
+ * （实测 gio 2.88：/tmp 为独立挂载时报 "Trashing on system internal mounts
+ * is not supported"；/tmp 非独立挂载时 topdir 回退到 /，非 root 同样失败）。
+ * 临时文件即用即弃，回收站毫无意义 —— 目标全部命中时放行真 rm。
+ * 只收「一次性」目录：/boot、/usr 等其他内部挂载仍照常改写（宁改不放，
+ * 真删不可接受）；相对路径无 cwd 无法判定，也照常改写。
+ */
+const SYSTEM_TEMP_PREFIXES = ["/tmp", "/var/tmp"];
+
+/** 词法解析 `.`/`..`，防止 `/tmp/../etc/x` 被误判为 /tmp 下的路径。 */
+function normalizeAbsPath(p: string): string {
+  const parts: string[] = [];
+  for (const part of p.split("/")) {
+    if (part === "" || part === ".") continue;
+    if (part === "..") {
+      parts.pop(); // POSIX：根上的 `/..` 即根；空栈 pop 为 no-op，行为正确
+      continue;
+    }
+    parts.push(part);
+  }
+  return `/${parts.join("/")}`;
+}
+
+/** 目标是否落在 gio trash 必拒的系统临时目录下（仅绝对路径可判定）。 */
+export function isSystemTempPath(file: string): boolean {
+  // 分词器保留引号字符（token 可能是 `"/tmp/x"`），判定前先剥掉
+  const bare = file.replace(/["']$/, "").replace(/^["']/, "");
+  if (!bare.startsWith("/")) return false;
+  const norm = normalizeAbsPath(bare);
+  return SYSTEM_TEMP_PREFIXES.some((base) => norm === base || norm.startsWith(`${base}/`));
+}
+
+/**
  * Split a compound command on shell operators, preserving the operators.
  * `a && b | c; d` → ["a", "&&", "b", "|", "c", ";", "d"]
  */
@@ -244,6 +277,10 @@ export function rewriteSegment(segment: string): string | null {
     // `rm` with no file args is a no-op; leave unchanged (e.g. `rm --help`)
     return null;
   }
+
+  // 系统临时目录直通：gio trash 在 /tmp、/var/tmp 上必然失败，改写只会把
+  // 本可执行的删除变成必挂命令；全部目标都在临时目录时原样放行（真删）。
+  if (files.every(isSystemTempPath)) return null;
 
   const out = [`gio trash${sawForce ? " --force" : ""}`, ...files].join(" ");
   return out;

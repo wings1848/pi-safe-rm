@@ -2,7 +2,7 @@
  * Unit tests for pi-safe-rm rewrite logic.
  * Run: bun ./src/rewrite.test.ts
  */
-import { rewriteRmCommand, rewriteSegment, splitCommand } from "./rewrite.ts";
+import { isSystemTempPath, rewriteRmCommand, rewriteSegment, splitCommand } from "./rewrite.ts";
 import assert from "node:assert/strict";
 
 let passed = 0;
@@ -48,5 +48,26 @@ t("引号形式绕过", "SAFE_RM_USE_RM='1' rm -rf x", "SAFE_RM_USE_RM='1' rm -r
 t("非 rm 命令", "git status", "git status");
 t("rm --help 无文件参数不改", "rm --help", "rm --help");
 t("嵌套引号操作符已知局限", "rm 'a && b'", "gio trash 'a && b'");
+
+console.log("== 系统临时目录直通（gio 拒收系统内部挂载）==");
+t("/tmp 直通", "rm /tmp/x", "rm /tmp/x");
+t("/tmp 递归直通（旗标原样保留）", "rm -rf /tmp/build", "rm -rf /tmp/build");
+t("/var/tmp 直通", "rm /var/tmp/cache.tar", "rm /var/tmp/cache.tar");
+t("/tmp 目录本身", "rm -rf /tmp", "rm -rf /tmp");
+t("尾部斜杠直通", "rm -rf /tmp/x/", "rm -rf /tmp/x/");
+t("-- 后仍直通", "rm -- /tmp/x", "rm -- /tmp/x");
+t("引号路径直通", 'rm "/tmp/my file"', 'rm "/tmp/my file"');
+t("command rm 直通", "command rm /tmp/x", "command rm /tmp/x");
+t("前缀不误伤 /tmpfoo", "rm /tmpfoo", "gio trash /tmpfoo");
+t(".. 穿越不直通", "rm /tmp/../etc/passwd", "gio trash /tmp/../etc/passwd");
+t("相对路径不特判", "cd /tmp && rm x", "cd /tmp && gio trash x");
+t("混合目标保守改写", "rm /tmp/a /home/b", "gio trash /tmp/a /home/b");
+
+console.log("== isSystemTempPath 边界 ==");
+assert.equal(isSystemTempPath("//tmp/x"), true, "双斜杠归一");
+assert.equal(isSystemTempPath("/var/tmp"), true, "var/tmp 本身");
+assert.equal(isSystemTempPath("tmp/x"), false, "相对路径");
+assert.equal(isSystemTempPath("/tmp/.."), false, "归一化为根");
+passed += 4;
 
 console.log(`\n${passed} tests passed ✅`);

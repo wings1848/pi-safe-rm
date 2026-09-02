@@ -58,12 +58,13 @@ converge("段拆分互补", "rm a; ls");
 converge("管道组合", "rm -rf dir | head -n 5");
 converge("&& 组合", "cd x && rm -rf y");
 converge("RTK 域命令", "git status && rm t");
-converge("纯净 rm", "rm -rf /tmp/x");
+converge("纯净 rm", "rm -rf build");
+converge("系统临时目录直通", "rm -rf /tmp/x");
 converge("已 rtk 包装", "rm a; rtk ls");
 
 console.log("== 幂等 ==");
 {
-  const once = rewriteRmCommand("rm -rf /tmp/x").rewritten;
+  const once = rewriteRmCommand("rm -rf build").rewritten;
   const twice = rewriteRmCommand(once).rewritten;
   assert.equal(once, twice, "幂等失败");
   console.log(`  ✓ 幂等: ${once}`);

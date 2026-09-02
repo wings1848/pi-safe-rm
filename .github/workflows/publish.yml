@@ -14,16 +14,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-bun@v2
+        with:
+          bun-version: latest
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org/
 
-      - name: Run tests
+      - name: Install dev deps
+        run: npm i -D typescript @types/node
+
+      - name: Typecheck + tests
         run: |
-          npm i -D typescript @types/node >/dev/null 2>&1 || true
-          npx tsc -p tsconfig.json --noEmit && echo "typecheck OK"
-          npm test || echo "tests skipped (bun not in CI)"
+          bunx tsc -p tsconfig.json --noEmit
+          bun ./src/rewrite.test.ts
+          bun ./src/coexistence.test.ts
 
       # 双模式发布：
       #  - 若仓库配置了 GitHub Secrets 的 NPM_TOKEN → 传统 token 发布

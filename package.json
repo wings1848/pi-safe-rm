@@ -1,6 +1,6 @@
 {
   "name": "pi-safe-rm",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Pi extension that rewrites Bash tool `rm` to `gio trash` (system recycle bin) — prevent accidental permanent deletion by coding agents.",
   "type": "module",
   "main": "./index.ts",

@@ -2,7 +2,7 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 与 [SemVer](https://semver.org/lang/zh-CN/)。
 
-## [Unreleased]
+## [0.2.0] - 2026-09-02
 
 ### Changed
 - 系统临时目录直通：`rm` 目标全部位于 `/tmp`、`/var/tmp` 时不再改写 —— gio trash 对 GLib「系统内部挂载点」必然拒绝，改写只会把可执行的删除变成必失败；临时文件本身即用即弃，真删

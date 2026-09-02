@@ -44,6 +44,9 @@ jobs:
       # 双模式发布：
       #  - 若仓库配置了 GitHub Secrets 的 NPM_TOKEN → 传统 token 发布
       #  - 若 npm 侧已关联 Trusted Publisher（OIDC）→ 自动走可信发布，无需 token
+      - name: Set version from tag
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version
+
       - name: Publish to npm
         run: npm publish --provenance --access public
         env:

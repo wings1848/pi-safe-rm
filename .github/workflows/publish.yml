@@ -39,7 +39,7 @@ jobs:
         uses: trufflesecurity/trufflehog@v3.88.2
         with:
           path: ./
-          extra_args: --results=verified --no-update
+          extra_args: --results=verified
 
       # 双模式发布：
       #  - 若仓库配置了 GitHub Secrets 的 NPM_TOKEN → 传统 token 发布

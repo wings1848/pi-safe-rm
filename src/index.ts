@@ -4,48 +4,48 @@
  * Rewrites Bash tool `rm` invocations to `gio trash` at tool_call time,
  * mirroring the classic safe-rm PreToolUse hook for Claude Code.
  *
- * Coexists with RTK: RTK rewrites git/cargo/pnpm-class commands, not `rm`
- * (verified: `rtk rewrite "rm -rf x"` exits non-zero with no output), so
- * these two handlers never fight over the same command.
+ * Isolation guarantees (works with or without RTK installed):
+ * - Zero runtime dependency on RTK: only `tool_call` events are consumed,
+ *   only `rm` segments are touched. RTK rewrites git/cargo/ls-class
+ *   segments — disjoint, both orders converge (see coexistence tests).
+ * - Any internal error is swallowed (fail-open): pi's runner does NOT
+ *   catch handler exceptions, so this extension must never let one escape
+ *   or it would break the whole tool_call chain for other extensions.
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { existsSync } from "node:fs";
-import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { homedir } from "node:os";
 import { rewriteRmCommand } from "./rewrite.ts";
 
-/** File used as an in-process indicator when gio was missing. */
+/** Cheap PATH-aware check; PATH is stable within a session. */
 function gioAvailable(): boolean {
-  // Cheap PATH-aware check; PATH is stable within a session.
   const path = (process.env.PATH ?? "").split(":");
   return path.some((dir) => existsSync(join(dir || "/", "gio")));
 }
 
 export default function piSafeRmExtension(pi: ExtensionAPI): void {
   pi.on("tool_call", (event) => {
-    if (event.toolName !== "bash") return {};
-    const input = event.input;
-    if (typeof input.command !== "string" || !input.command.trim()) return {};
+    try {
+      if (event.toolName !== "bash") return {};
+      const input = event.input;
+      if (typeof input.command !== "string" || !input.command.trim()) return {};
 
-    if (!gioAvailable()) {
-      // No trash support on this system: leave the command alone rather
-      // than silently breaking it. (gio ships with GLib on virtually all
-      // desktops; users on bare servers can uninstall this extension.)
-      return {};
-    }
+      if (!gioAvailable()) {
+        // No trash support (bare server, minimal container): leave the
+        // command as-is rather than silently breaking it.
+        return {};
+      }
 
-    const result = rewriteRmCommand(input.command);
-    if (result.changed) {
-      input.command = result.rewritten;
+      const result = rewriteRmCommand(input.command);
+      if (result.changed) {
+        input.command = result.rewritten;
+      }
+    } catch (err) {
+      // Fail-open: never let an internal bug break the tool_call chain
+      // (pi's runner does not catch extension handler exceptions).
+      console.error("[pi-safe-rm] rewrite skipped due to error:", err);
     }
     return {};
   });
-
-  writeFileSync(
-    join(homedir(), ".pi", "agent", "state", "pi-safe-rm-ok.txt"),
-    `loaded ${new Date().toISOString()}\n`,
-    { flag: "w" },
-  );
 }

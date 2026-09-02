@@ -36,7 +36,7 @@ jobs:
           bun ./src/coexistence.test.ts
 
       - name: Secrets scan gate (verified only, quick)
-        uses: trufflesecurity/trufflehog@v3.88.2
+        uses: trufflesecurity/trufflehog@v3.97.1
         with:
           path: ./
           extra_args: --results=verified
